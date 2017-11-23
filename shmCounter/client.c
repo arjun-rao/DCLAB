@@ -17,7 +17,7 @@ int main()
     shm_addr = (int *) shmat(shmid, NULL, 0);
     printf("Shared Memory Address: %d\n", shm_addr);
 
-    while ( num == 1)
+    while ( num == 1) {
         printf("Enter 1 to increment ");
         scanf("%d", &num);
         counter = *shm_addr;
