@@ -7,7 +7,7 @@
 
 int main()
 {
-    int shmid, counter;
+    int shmid, counter = 1;
     key_t key = SHMKEY;
     int* shm_addr;
 
@@ -17,11 +17,16 @@ int main()
     shm_addr = (int *) shmat(shmid, NULL, 0);
     printf("Shared Memory Address: %d\n", shm_addr);
 
-    printf("Enter the counter value\n");
-    scanf("%d", &counter );
     *shm_addr = counter;
 
-    while(1);
+    printf("Waiting for clients...\n");
+    while(1)
+    {
+        if (*shm_addr != counter){
+            printf("Counter was incremented to: %d\n", *shm_addr);
+            counter = *shm_addr;
+        }
+    }
 
     return 0;
 }
