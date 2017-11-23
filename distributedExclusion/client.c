@@ -16,13 +16,10 @@ int main()
     sockaddr.sin_port = htons(5000);
     sockaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    sockid = socket(AF_INET, SOCK_STREAM, 0);
-    
-    connect(sockid, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
-    printf("Connected to server\n");
-
     while(1){
-       
+        sockid = socket(AF_INET, SOCK_STREAM, 0);
+        connect(sockid, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
+        printf("Connected to server\n");
         recv(sockid, recv_msg, 50, 0);
 
         if (strcmp(recv_msg, "LOCKED") == 0) {
@@ -37,9 +34,9 @@ int main()
             send(sockid, send_msg, 50, 0);
             recv(sockid, recv_msg, 50, 0);
             printf("Message from server: %s\n", recv_msg);
-            close(sockid);
             break;
         }
+        close(sockid);
     }
     return 0;
 }
