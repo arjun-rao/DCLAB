@@ -77,8 +77,6 @@ void status() {
             cout << "Alive";
         else
             cout << "Dead";
-        if (i == initiatorID)
-            cout << "  -> INITIATOR";
         if (i == coordinatorID)
             cout << "  -> COORDINATOR";
         cout << endl;
