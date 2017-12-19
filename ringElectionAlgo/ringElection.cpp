@@ -30,11 +30,8 @@ void buildRing(int init_id = -1) {
         //Randomly pick initiator from alive processes
         if(init_id == -1)
         {
-            do
-            {
-                initiator_index = rand()%alive_count;
-                initiatorID = alive_processes[ initiator_index ];
-            }while(initiatorID == coordinatorID && coordinatorID != -1);
+            initiator_index = rand()%alive_count;
+            initiatorID = alive_processes[ initiator_index ];
         } else {
             initiatorID = init_id;
             for(int i = 0;i<alive_count;i++) if(alive_processes[i] == init_id){
