@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <cstdlib>
 using namespace std;
 
@@ -7,7 +8,7 @@ int initiatorID = -1;
 int coordinatorID = -1;
 int number;
 
-void buildRing() {
+void buildRing(int init_id = -1) {
     //Finds alive processes;
     int alive_processes[number], alive_count = 0;
 
@@ -25,25 +26,46 @@ void buildRing() {
     }
 
     else {
-
+        int initiator_index;
         //Randomly pick initiator from alive processes
-        int initiator_index = rand()%alive_count;
-        initiatorID = alive_processes[ initiator_index ];
-
+        if(init_id == -1)
+        {
+            do
+            {
+                initiator_index = rand()%alive_count;
+                initiatorID = alive_processes[ initiator_index ];
+            }while(initiatorID == coordinatorID && coordinatorID != -1);
+        } else {
+            initiatorID = init_id;
+            for(int i = 0;i<alive_count;i++) if(alive_processes[i] == init_id){
+                initiator_index = i;
+                break;
+            }
+        }
         cout << "Initiator ID: " << initiatorID << endl;
 
         int i = 0;
-
+        stringstream msg;
         int current = initiator_index;
 
-        // Prints the messages passed in the ring
+        // Prints the election messages passed in the ring
         do {
-        int next = (current + 1) % alive_count;
-        cout << "Message from " << alive_processes[current] << " -> " << alive_processes[next] << endl;
-        current = next;
+            int next = (current + 1) % alive_count;
+            cout << "Election Message from " << alive_processes[current] << " -> " << alive_processes[next];
+            msg << alive_processes[current] <<",";
+            cout<<": "<<msg.str()<<endl;
+            current = next;
         } while (alive_processes[current] != initiatorID);
 
-        // Largest ID is coordinator
+        // Prints the Coordinator messages passed in the ring
+        do {
+            int next = (current + 1) % alive_count;
+            cout << "Coordinator Message from " << alive_processes[current] << " -> " << alive_processes[next];
+            cout<<": "<<msg.str()<<endl;
+            current = next;
+        } while (alive_processes[current] != initiatorID);
+
+        // Largest ID is coord  inator
         coordinatorID = alive_processes[alive_count - 1];
         cout << "Coordinator ID: " << coordinatorID << endl;
     }
@@ -72,10 +94,10 @@ void recoverProcess() {
     cin >> ID;
     if( p[ID] == false ){
         p[ID] = true;
-        buildRing();
+        buildRing(ID);
         status();
     }
-    else 
+    else
         cout << "\nProcess Already Active\n";
   }
 
@@ -85,10 +107,11 @@ void crashProcess() {
     cin >> ID;
     if( p[ID] == true ){
         p[ID] = false;
-        buildRing();
+        if (ID == coordinatorID)
+            buildRing();
         status();
     }
-    else 
+    else
         cout << "\nProcess Already Dead\n";
 }
 
