@@ -1,4 +1,4 @@
-##
+## Lab specific instructions:
 * rpcinfo to check if its there
 * create hexoct.x
 * rpcgen -aC hexoct.x
@@ -104,10 +104,6 @@ In another window, run:
 
 	./hexoct_client localhost
 
-In the server window, you should see the following text appear:
-
-
-	add function called
-
+	
 This confirms that the client and server are communicating. If your client just seems to be hanging, chances are you have not started the portmapper.
 
