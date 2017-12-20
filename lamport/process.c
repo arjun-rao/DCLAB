@@ -1,112 +1,102 @@
 #include <stdio.h>
-#include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/ipc.h>
+#include <stdlib.h>
+#include <pthread.h>
 
-#define SHMKEY 2017
-#define SHMSIZE 1024
-
-typedef struct event{
-    int count,src,dest,timestamp;
+typedef struct {
+    int count;
+    int src;
+    int dest;
+    int timestamp;
     int message;
-} event;
+} share;
 
-int shm_id;
-event * shm_addr;
+typedef struct {
+    int pid;
+    int *timestamp;
+    share *shm_addr;
+} thread_data;
 
-int pid,timestamp = 0;
+#define SHMSIZE 1024
+#define SHMKEY 1234
 
-void receiveEvent(){
-    event current = *shm_addr;
-    if (current.message && current.dest == pid)
-    {
-        current.message = 0;
-        printf("\nReceived message from %d with timestamp: %d\n",current.src,current.timestamp);
-        if (current.timestamp >= timestamp){
-            timestamp = current.timestamp+1;
-            printf("\nUpdated logical clock to %d\n",timestamp);
+static void *receiver (void * d){
+    pthread_detach(pthread_self());
+    thread_data* data = (thread_data *) d;
+    share *shm_addr = data->shm_addr;
+    printf("\nProcess: %d\n",data->pid);
+    while(1){
+        if(data->pid == shm_addr->dest && shm_addr->message == 1){
+            printf("\nMessage received from process %d, with timestamp: %d\n",  shm_addr->src,shm_addr->timestamp);
+            if(*(data->timestamp) < shm_addr->timestamp){
+                *(data->timestamp) = shm_addr->timestamp+1;
+            }
+            else {
+                *(data->timestamp) += 1;
+            }
+            shm_addr->src = -1;
+            shm_addr->dest = -1;
+            shm_addr->timestamp = -1;
+            shm_addr->message = 0;
+            printf("\nCurrent Timestamp: %d\n$:",*(data->timestamp));
+            fflush(stdout);
         }
-        else {
-            printf("\n No change to logical clock, value is: %d\n",timestamp);
-            timestamp++;
-        }
-
     }
-    *shm_addr = current;
-}
 
-void localEvent(){
-    receiveEvent();
-    printf("\nLocal event at time: %d\n",timestamp);
-    timestamp++;
-}
-void sendEvent(){
-    int destID;
-    printf("Enter destination:");
-    scanf("%d",&destID);
-    receiveEvent();
-    if (shm_addr-> count < destID)
-    {
-        printf("Invalid destination");
-    } else {
-        event current = *shm_addr;
-        current.src = pid;
-        current.dest = destID;
-        current.message = 1;
-        current.timestamp = timestamp++;
-        *shm_addr = current;
-        printf("\nSent message to %d with timestamp: %d\n",current.dest,current.timestamp);
-    }
 }
 
 
 int main(){
-
-    int ch;
+    int pid,choice,shm_id,flag = 0,temp;
+    int timestamp = 0;
+    share *shm_addr;
+    pthread_t thread;
     key_t key = SHMKEY;
-
-
-    event current;
-    shm_id = shmget(key, SHMSIZE, 0666);
-    if (shm_id == -1){
-        shm_id = shmget(key, SHMSIZE, IPC_CREAT |0666);
-        shm_addr =  (event *) shmat(shm_id, NULL, 0);
-        current.count = 1;
-        current.message = 0;
-        current.timestamp = 0;
-        pid = current.count;
-        *shm_addr = current;
+    shm_id = shmget(key,SHMSIZE, 0666);
+    if (shm_id == -1) {
+        shm_id = shmget(key,SHMSIZE,IPC_CREAT|0666);
+        flag = 1;
     }
-    else {
-        shm_addr =  (event *) shmat(shm_id, NULL, 0);
-        current = *shm_addr;
-        pid = ++current.count;
-        current.message = 0;
-        current.timestamp = 0;
-        *shm_addr = current;
+    shm_addr = (share *) shmat(shm_id,NULL,0);
+    thread_data data;
+    data.shm_addr = shm_addr;
+    if(flag){
+        shm_addr->count = 1;
     }
-    printf("Process PID = %d",pid);
+    pid = shm_addr->count + 1;
+    shm_addr->count = pid;
+    shm_addr->message = 0;
+    data.pid = pid;
+    data.timestamp = &timestamp;
+    pthread_create(&thread,NULL,&receiver, &data);
 
-    while(1){
-        printf("\nlogical clock value: %d\n",timestamp);
-        printf("\n1. Local event\n2. Send event\n3.Exit\nEnter choice:");
-        scanf("%d",&ch);
-        switch(ch) {
+    while(1)
+    {
+
+        printf("\n1: local\n2: send\n3: exit\n");
+        printf("\nCurrent Timestamp: %d\n$:",timestamp);
+        scanf("%d",&choice);
+        switch(choice){
             case 1:
-                localEvent();
+                timestamp++;
+                printf("\nLocal Event at %d\n",timestamp);
                 break;
             case 2:
-                sendEvent();
+                timestamp++;
+                printf("\nEnter dest:\n$:");
+                scanf("%d",&temp);
+                printf("\nMessage sent to %d with timestamp: %d\n",temp,timestamp);
+                shm_addr->src = pid;
+                shm_addr->dest = temp;
+                shm_addr->timestamp = timestamp;
+                shm_addr->message = 1;
                 break;
             case 3:
-            case 4: //secret reset
-                current.count = 0;
-                current.message = 0;
-                current.timestamp = 0;
-                *shm_addr = current;
                 break;
             default:
-                printf("\n");
+                break;
         }
-        if (ch == 3) break;
+        if (choice == 3)exit(0);
     }
 }
